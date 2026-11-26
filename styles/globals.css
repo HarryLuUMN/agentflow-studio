@@ -3,3 +3,40 @@
 @tailwind utilities;
 
 @import 'reactflow/dist/style.css';
+
+body { margin: 0; font-family: system-ui, sans-serif; color: #17233a; }
+button, select, input { font: inherit; }
+.workflow { display: flex; flex-direction: column; height: 100dvh; background: #f7f8fc; }
+.workflow-header { display: flex; align-items: center; flex-wrap: wrap; gap: 1rem; padding: .8rem 1.25rem; background: #fff; border-bottom: 1px solid #dce2ed; }
+.workflow-header h1 { margin: 0; font-size: 1.25rem; }
+.workflow-header p { margin: 0; font-size: .9rem; }
+[role=alert] { color: #9f1239; }
+.workflow-layout { display: flex; flex: 1; min-height: 0; }
+.workflow-config { flex: 0 0 19rem; overflow-y: auto; padding: 1rem; background: #fff; border-right: 1px solid #dce2ed; }
+.workflow-config fieldset { border: 0; padding: 0; margin: 0; min-width: 0; }
+.workflow-config legend { font-weight: 700; padding: 0; margin-bottom: .5rem; }
+.workflow-config h2 { font-size: .85rem; margin: 1.25rem 0 .25rem; }
+.workflow-config label { display: grid; gap: .25rem; margin: .55rem 0; font-size: .88rem; }
+.workflow-config input, .workflow-config select { min-width: 0; width: 100%; padding: .4rem; border: 1px solid #bac6d8; border-radius: .35rem; background: #fff; color: inherit; }
+.config-note, .dataset-reference { color: #465675; font-size: .82rem; margin: .4rem 0; }
+.dataset-reference p { white-space: pre-wrap; }
+.workflow-actions { display: flex; gap: .5rem; margin-top: 1rem; }
+.workflow-actions button, .workflow-dialog button { padding: .45rem .75rem; border: 1px solid #536ea3; border-radius: .35rem; background: white; cursor: pointer; }
+.workflow-actions button:first-child { background: #284d91; color: white; }
+.workflow-actions button:disabled { opacity: .6; cursor: default; }
+.workflow-canvas { min-width: 0; flex: 1; }
+.workflow-canvas .react-flow__node { cursor: pointer; }
+.dialog-backdrop { position: fixed; inset: 0; display: grid; place-items: center; background: #17233a77; z-index: 10; }
+.workflow-dialog { width: min(48rem, 92vw); max-height: 86vh; overflow-y: auto; padding: 1.25rem; border-radius: .75rem; background: #fff; }
+.workflow-dialog header { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+.workflow-dialog h2 { font-size: 1.15rem; white-space: pre-line; }
+.workflow-dialog h3 { font-size: 1rem; margin: 1rem 0 .35rem; }
+.workflow-dialog pre { background: #f3f6fb; padding: .75rem; white-space: pre-wrap; overflow-wrap: anywhere; max-height: 18rem; overflow-y: auto; }
+.workflow-dialog details { margin-top: .6rem; }
+.report-text { white-space: pre-wrap; }
+.report-chart { overflow-x: auto; }
+@media (max-width: 680px) {
+  .workflow-layout { flex-direction: column; }
+  .workflow-config { flex-basis: 42%; border-right: 0; border-bottom: 1px solid #dce2ed; }
+  .workflow-canvas { min-height: 15rem; }
+}

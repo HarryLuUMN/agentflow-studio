@@ -2,9 +2,10 @@
 
 export interface LLMCallOptions {
   prompt: string;
+  system?: string;
   agentName?: string;
   temperature?: number;
-  onLog?: (message: string) => void;
+  onLog?: ((message: string) => void) | undefined;
 }
 
 export interface LLMResponse {
@@ -20,7 +21,7 @@ export async function callLLM(
   apiKey: string,
   options: LLMCallOptions
 ): Promise<LLMResponse> {
-  const { prompt, agentName = 'Agent', temperature = 0.7, onLog } = options;
+  const { prompt, system, agentName = 'Agent', temperature = 0.7, onLog } = options;
 
   onLog?.(`[${agentName}] Calling OpenAI...`);
 
@@ -33,7 +34,10 @@ export async function callLLM(
       },
       body: JSON.stringify({
         model: 'gpt-4o-mini',
-        messages: [{ role: 'user', content: prompt }],
+        messages: [
+          ...(system ? [{ role: 'system', content: system }] : []),
+          { role: 'user', content: prompt },
+        ],
         temperature,
       }),
     });

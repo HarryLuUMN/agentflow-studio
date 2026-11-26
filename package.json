@@ -8,7 +8,7 @@
     "studio": "npx @langchain/langgraph-cli dev",
     "build": "next build",
     "start": "next start",
-    "test": "ts-node langgraph/baseline.ts"
+    "test": "node --experimental-strip-types --test tests/*.test.ts"
   },
   "keywords": [
     "langgraph",
@@ -31,6 +31,7 @@
     "react-vega": "^8.0.0",
     "reactflow": "^11.11.4",
     "vega": "^6.2.0",
+    "vega-embed": "^7.1.0",
     "vega-lite": "^6.4.1"
   },
   "devDependencies": {

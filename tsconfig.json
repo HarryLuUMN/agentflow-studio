@@ -1,10 +1,12 @@
 {
   "compilerOptions": {
     // Module Settings
-    "module": "commonjs",
+    "module": "esnext",
     "target": "es2020",
     "lib": [
-      "es2020"
+      "es2020",
+      "dom",
+      "dom.iterable"
     ],
     "types": [
       "node"
@@ -20,7 +22,8 @@
     "noUncheckedIndexedAccess": true,
     "exactOptionalPropertyTypes": true,
     // Module Resolution
-    "moduleResolution": "node",
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
     "resolveJsonModule": true,
     "skipLibCheck": true,
     // Other
@@ -32,7 +35,8 @@
     "jsx": "preserve"
   },
   "include": [
-    "**/*.ts"
+    "**/*.ts",
+    "**/*.tsx"
   ],
   "exclude": [
     "node_modules"

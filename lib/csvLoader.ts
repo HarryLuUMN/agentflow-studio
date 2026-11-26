@@ -38,12 +38,12 @@ function parseCSV(csvText: string): CSVRow[] {
   const rows: CSVRow[] = [];
   
   for (let i = 1; i < lines.length; i++) {
-    const values = parseCSVLine(lines[i]);
+    const values = parseCSVLine(lines[i] ?? '');
     if (values.length !== headers.length) continue;
     
     const row: CSVRow = {};
     headers.forEach((header, idx) => {
-      const value = values[idx].trim();
+      const value = (values[idx] ?? '').trim();
       const numValue = parseFloat(value);
       row[header] = isNaN(numValue) ? value : numValue;
     });
@@ -81,7 +81,7 @@ function parseCSVLine(line: string): string[] {
 /**
  * 将原始 CSV 数据转换为可视化用的聚合数据格式
  */
-export function aggregateCSVData(dataset: Dataset, csvData: CSVRow[]): any[] {
+export function aggregateCSVData(dataset: Dataset, csvData: CSVRow[]): CSVRow[] {
   if (dataset === 'baseball') {
     return aggregateBaseballData(csvData);
   } else {
@@ -92,7 +92,7 @@ export function aggregateCSVData(dataset: Dataset, csvData: CSVRow[]): any[] {
 /**
  * 聚合 Baseball 数据
  */
-function aggregateBaseballData(csvData: CSVRow[]): any[] {
+function aggregateBaseballData(csvData: CSVRow[]): CSVRow[] {
   const counts: Record<string, number> = {};
   
   csvData.forEach(row => {
@@ -104,9 +104,9 @@ function aggregateBaseballData(csvData: CSVRow[]): any[] {
     counts[key] = (counts[key] || 0) + 1;
   });
   
-  const result: any[] = [];
+  const result: CSVRow[] = [];
   Object.entries(counts).forEach(([key, count]) => {
-    const [player, year, is_hit] = key.split('|');
+    const [player = '', year = '', is_hit = ''] = key.split('|');
     result.push({ player, year, is_hit, count });
   });
   
@@ -116,7 +116,7 @@ function aggregateBaseballData(csvData: CSVRow[]): any[] {
 /**
  * 聚合 Kidney 数据
  */
-function aggregateKidneyData(csvData: CSVRow[]): any[] {
+function aggregateKidneyData(csvData: CSVRow[]): CSVRow[] {
   const counts: Record<string, number> = {};
   
   csvData.forEach(row => {
@@ -128,9 +128,9 @@ function aggregateKidneyData(csvData: CSVRow[]): any[] {
     counts[key] = (counts[key] || 0) + 1;
   });
   
-  const result: any[] = [];
+  const result: CSVRow[] = [];
   Object.entries(counts).forEach(([key, count]) => {
-    const [treatment, size, success] = key.split('|');
+    const [treatment = '', size = '', success = ''] = key.split('|');
     result.push({ treatment, size, success, count });
   });
   
