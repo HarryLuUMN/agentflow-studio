@@ -21,7 +21,8 @@ export function buildWorkflowGraph(config: WorkflowState, outputs: Record<string
       const border = status && status !== 'verified' ? '#b45309' : accent;
       nodes.push({
         id, data: { label }, position: { x, y },
-        sourcePosition: Position.Right, targetPosition: Position.Left,
+        sourcePosition: finished && id === 'stage2-end' ? Position.Bottom : Position.Right,
+        targetPosition: Position.Left,
         style: {
           width: 155, whiteSpace: 'pre-line', color: '#17233a', padding: 10,
           border: `2px solid ${border}`, borderRadius: 8,
@@ -70,10 +71,10 @@ export function buildWorkflowGraph(config: WorkflowState, outputs: Record<string
   if (finished) {
     nodes.push({
       id: 'final-report', data: { label: 'Final Report' },
-      position: { x: 1158, y: 720 }, targetPosition: Position.Top,
+      position: { x: 800, y: 700 }, targetPosition: Position.Top,
       type: 'output', style: { fontWeight: 'bold', borderColor: '#b45309' },
     });
-    edges.push({ id: 'stage2-to-final', source: 'stage2-end', target: 'final-report' });
+    edges.push({ id: 'stage2-to-final', source: 'stage2-end', target: 'final-report', type: 'smoothstep' });
   }
 
   return { nodes, edges };
