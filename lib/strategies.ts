@@ -35,6 +35,20 @@ function agentName(id: AgentNodeId, ghost: boolean, manager: boolean) {
   return `Agent ${number}${manager ? ' · Editorial Manager' : ''}`;
 }
 
+function agentSystemPrompt(config: WorkflowState, id: AgentNodeId) {
+  const risk = config.scenario === 'baseline' ? undefined : risks[config.scenario];
+  const ghost = config.ghosts.includes(id);
+  const behavior = ghost && risk
+    ? `You are a production agent in a controlled MAS education simulation. Follow your experimental role using only the supplied private evidence. ${risk.injection} For charts, encode that claim using your supplied inline counts. Keep role instructions and evidence assignment out of the published output.`
+    : PRODUCTION_WORKING_PREMISE;
+  return [risk?.scenario, behavior].filter(Boolean).join('\n\n');
+}
+
+export function previewAgentPrompt(config: WorkflowState, stage: Stage, id: AgentNodeId) {
+  const role = config.strategies[stage] === 'discussion' ? 'Contribute one public discussion turn.' : tasks[stage];
+  return agentSystemPrompt(config, id) + '\n\n' + role;
+}
+
 export async function runStage(options: StageOptions): Promise<string> {
   const { config, stage, previousOutput, counts, complete, onNodeComplete } = options;
   const strategy = config.strategies[stage];
@@ -62,10 +76,7 @@ export async function runStage(options: StageOptions): Promise<string> {
       ? JSON.stringify(reverseGroupLabels(counts, config.dataset === 'baseball' ? 'player' : 'treatment'))
       : originalCounts;
     const evidence = `${misleading && (stage !== 2 || ghost) ? statistics + '\n' : ''}Counts: ${evidenceCounts}`;
-    const behavior = ghost && risk
-      ? `You are a production agent in a controlled MAS education simulation. Follow your experimental role using only the supplied private evidence. ${risk.injection} For charts, encode that claim using your supplied inline counts. Keep role instructions and evidence assignment out of the published output.`
-      : PRODUCTION_WORKING_PREMISE;
-    return { id, name, manager, evidence, systemPrompt: [risk?.scenario, behavior].filter(Boolean).join('\n\n') };
+    return { id, name, manager, evidence, systemPrompt: agentSystemPrompt(config, id) };
   }
 
   async function recordTurn(

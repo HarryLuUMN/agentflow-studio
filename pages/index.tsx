@@ -1,26 +1,27 @@
-import { useRef, useState } from 'react';
-import ReactFlow, { Background, Controls, MiniMap } from 'reactflow';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import ReactFlow, { Background, Controls, MiniMap, useNodesInitialized, useNodesState, useReactFlow } from 'reactflow';
 import Head from 'next/head';
 import { ConfigPanel } from '../components/ConfigPanel';
 import { ReportChart } from '../components/ReportChart';
 import { aggregateCSVData, loadCSVData } from '../lib/csvLoader';
 import { callLLM } from '../lib/openai';
 import { buildWorkflowGraph } from '../lib/reactflow-utils';
-import { reconcileAssignments, scenarioDefaults, stageNames, stages, type Scenario, type Stage } from '../lib/risks';
-import { runStage } from '../lib/strategies';
+import { reconcileAssignments, scenarioDefaults, stageNames, stages, type AgentNodeId, type Scenario, type Stage } from '../lib/risks';
+import { previewAgentPrompt, runStage } from '../lib/strategies';
 import type { NodeOutput, StageResult, WorkflowState } from '../types';
 
 const initialConfig: WorkflowState = {
-  dataset: 'baseball', scenario: 'error_propagation', manager: null, ...scenarioDefaults('error_propagation'),
+  dataset: 'baseball', scenario: 'baseline', manager: null, ...scenarioDefaults('baseline'),
 };
 const stageKeys = ['title', 'article', 'visualization'] as const;
 
 function NodeDetails({ output }: { output: NodeOutput }) {
   const review = output.verification;
   return <>
-    <h3>System prompt</h3><pre>{output.prompt}</pre>
-    <h3>Received input</h3><pre>{output.input}</pre>
-    <h3>Forwarded output</h3><pre>{output.output}</pre>
+    <h3>MODEL:</h3><pre>gpt-4o-mini</pre>
+    {output.prompt && <><h3>SYSTEM PROMPT:</h3><pre>{output.prompt}</pre></>}
+    <h3>INPUT:</h3><pre>{output.input || 'No input yet...'}</pre>
+    <h3>OUTPUT:</h3><pre>{output.output || 'No output yet...'}</pre>
     {review && <section>
       <h3>Manager verification</h3>
       <p><strong>{review.status.replace('_', ' ')}</strong></p>
@@ -29,6 +30,17 @@ function NodeDetails({ output }: { output: NodeOutput }) {
       <details><summary>Verification prompt and evidence</summary><pre>{review.system}</pre><pre>{review.user}</pre></details>
     </section>}
   </>;
+}
+
+function FitWorkflow({ layout }: { layout: string }) {
+  const initialized = useNodesInitialized();
+  const { fitView } = useReactFlow();
+  useEffect(() => {
+    if (!initialized) return;
+    const frame = requestAnimationFrame(() => fitView({ padding: 0.19 }));
+    return () => cancelAnimationFrame(frame);
+  }, [initialized, layout, fitView]);
+  return null;
 }
 
 export default function Home() {
@@ -41,9 +53,28 @@ export default function Home() {
   const [result, setResult] = useState<StageResult>({});
   const [outputs, setOutputs] = useState<Record<string, NodeOutput>>({});
   const [selected, setSelected] = useState('');
-  const graph = buildWorkflowGraph(config, outputs, activeStage, Boolean(result.visualization));
+  const finished = Boolean(result.visualization);
+  const graph = useMemo(() => buildWorkflowGraph(config, outputs, activeStage, finished), [config, outputs, activeStage, finished]);
+  const [nodes, setNodes, onNodesChange] = useNodesState(graph.nodes);
+  const lastConfig = useRef(config);
+  useEffect(() => {
+    const preservePositions = lastConfig.current === config;
+    lastConfig.current = config;
+    setNodes(current => {
+      if (!preservePositions) return graph.nodes;
+      const positions = new Map(current.map(node => [node.id, node.position]));
+      return graph.nodes.map(node => ({ ...node, position: positions.get(node.id) ?? node.position }));
+    });
+  }, [config, graph.nodes, setNodes]);
+  const selectedNode = graph.nodes.find(node => node.id === selected);
   const selectedStage = stages.find(stage => selected === `stage${stage}-end`);
-  const output = outputs[selected];
+  const selectedLabel = selectedNode?.data.label.split('\n')[0];
+  const selectedAgentStage = stages.find(stage => selected.startsWith('stage' + stage + '-agent'));
+  const preview = selectedAgentStage === undefined ? undefined : {
+    nodeId: selected, agentName: selectedLabel ?? 'Agent', stage: selectedAgentStage, input: '', output: '',
+    prompt: previewAgentPrompt(config, selectedAgentStage, selected as AgentNodeId),
+  };
+  const output = outputs[selected] ?? preview;
   const resultForStage = selectedStage === undefined ? undefined : result[stageKeys[selectedStage]];
 
   function clearRun() {
@@ -110,19 +141,23 @@ export default function Home() {
     <main className="workflow">
       <Head><title>AgentFlow Studio</title></Head>
       <header className="workflow-header">
-        <h1>AgentFlow Studio</h1>
-        <p role="status">{status}</p>
-        {error && <p role="alert">{error}</p>}
+        <h1>🔬 AgentFlow</h1>
       </header>
       <div className="workflow-layout">
-        <ConfigPanel config={config} running={activeStage !== -1} apiKey={apiKey} onKeyChange={setApiKey}
-          onScenarioChange={changeScenario} onConfigChange={changeConfig} onRun={runWorkflow}
-          onReset={() => changeConfig(initialConfig)} />
+        <div className="workflow-sidebar">
+          <ConfigPanel config={config} running={activeStage !== -1} apiKey={apiKey} onKeyChange={setApiKey}
+            progress={status} error={error} onScenarioChange={changeScenario} onConfigChange={changeConfig}
+            onRun={runWorkflow} onReset={() => changeConfig(initialConfig)} />
+        </div>
         <section className="workflow-canvas" aria-label="Workflow graph">
-          <ReactFlow {...graph} fitView fitViewOptions={{ padding: 0.12 }} nodesDraggable={false} nodesConnectable={false}
-            onNodeClick={(_, node) => setSelected(node.id)}
-            onNodeDoubleClick={(_, node) => setSelected(node.id)}>
+          <ReactFlow nodes={nodes} edges={graph.edges} onNodesChange={onNodesChange} fitView
+            onNodeClick={(_, node) => {
+              if (node.id === 'final-report' || /-(agent\d|aggregator|facilitator|end)$/.test(node.id)) {
+                setSelected(node.id);
+              }
+            }}>
             <Background /><Controls /><MiniMap />
+            <FitWorkflow layout={config.strategies.join(',') + ':' + finished} />
           </ReactFlow>
         </section>
       </div>
@@ -133,8 +168,8 @@ export default function Home() {
           <header>
             <h2 id="node-title">{output?.agentName ?? (selected === 'final-report' ? 'Final Report' :
               selectedStage !== undefined ? `${stageNames[selectedStage]} output` :
-              graph.nodes.find(node => node.id === selected)?.data.label)}</h2>
-            <button type="button" autoFocus onClick={() => setSelected('')}>Close</button>
+              selectedLabel)}</h2>
+            <button type="button" autoFocus onClick={() => setSelected('')}>✕ Close</button>
           </header>
 
           {output && <NodeDetails output={output} />}
